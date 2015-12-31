@@ -14,6 +14,7 @@ lazy val root = Project(
   javaOptions ++= sys.process.javaVmArguments.filter(
     a => Seq("-Xmx", "-Xms", "-XX").exists(a.startsWith)
   ),
+  licenses := Seq("MIT License" -> url("http://opensource.org/licenses/mit-license")),
   ivyScala := ivyScala.value map { _.copy(overrideScalaVersion = true) },
   shellPrompt := { state =>
     val branch = if(file(".git").exists){
