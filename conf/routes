@@ -1,0 +1,5 @@
+GET     /:groupId/:artifactId/:version     dependency_graph.Application.graph(groupId, artifactId, version, cache: Boolean ?= true)
+GET     /:groupId/:artifactId              dependency_graph.Application.versions(groupId, artifactId, cache: Boolean ?= true)
+POST    /                                  dependency_graph.Application.post
+
+GET     /assets/*file                      controllers.Assets.at(path="/public", file)

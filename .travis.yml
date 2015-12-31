@@ -1,0 +1,18 @@
+sudo: false
+language: scala
+jdk:
+- oraclejdk8
+cache:
+  directories:
+  - $HOME/.ivy2/cache
+  - $HOME/.sbt/boot
+addons:
+  apt:
+    packages:
+    - graphviz
+script:
+  sbt test
+after_script:
+- find $HOME/.sbt -name "*.lock" | xargs rm
+- find $HOME/.ivy2 -name "ivydata-*.properties" | xargs rm
+- find $HOME/.ivy2/cache -name "*SNAPSHOT*" | xargs rm -rf
