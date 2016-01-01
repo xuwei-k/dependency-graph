@@ -18,12 +18,38 @@ object DependencyGraph {
 
   private[this] val logger = ProcessLogger(println(_))
 
+  private val baseSettings = """graphSettings
+
+Seq(Compile, Test, Runtime, Provided, Optional).flatMap{ c =>
+  inConfig(c){
+    dependencyDot := {
+      val nodes = moduleGraph.value.nodes.map{ n =>
+        val fullId = n.id.organisation + "/" + n.id.name + "/" + n.id.version
+        "  \"" + n.id.idString + "\"" +
+        "[label=<" + n.id.organisation + "<BR/><B>" + n.id.name + "</B><BR/>" + n.id.version + ">" +
+        ", href=\"http://dependency-graph.herokuapp.com/" + fullId + "/redirect-project-page\"" +
+        ", target=\"_blank\"" +
+        ", tooltip=\"" + fullId + "\"" +
+        "]"
+      }.mkString("\n")
+
+      val edges = moduleGraph.value.edges.map{ e =>
+        "  \"" + e._1.idString + "\" -> \"" + e._2.idString + "\""
+      }.mkString("\n")
+
+      val dot = List(dependencyDotHeader.value, nodes, edges).mkString("", "\n\n", "\n}")
+      sbt.IO.write(dependencyDotFile.value, dot)
+      dependencyDotFile.value
+    }
+  }
+}"""
+
   def generate(dependencies: Seq[LibraryDependency]): String = {
     IO.withTemporaryDirectory { dir =>
       val project = dir / "project"
       IO.createDirectory(project)
       IO.write(project / "p.sbt", pluginSbtContents)
-      IO.write(dir / "build.sbt", ("graphSettings" +: dependencies).mkString("\n\n"))
+      IO.write(dir / "build.sbt", (baseSettings +: dependencies).mkString("\n\n"))
       val args = new xsbt.boot.LauncherArguments("dependencyDot" :: Nil, false)
       println(xsbt.boot.Launch(dir, args))
       val svg = dir / "graph.svg"
@@ -94,4 +120,21 @@ object DependencyGraph {
         Nil
     }
 
+  def findURL(pom: Elem): Option[String] = {
+    List(
+      pom \ "url",
+      pom \ "scm" \ "url",
+      pom \ "organization" \ "url"
+    ).foldLeft(Option.empty[String]){
+      case (None, elem) =>
+        val url = elem.text
+        if(url.startsWith("http")){
+          Some(url)
+        } else {
+          None
+        }
+      case (a @ Some(_), _) =>
+        a
+    }
+  }
 }

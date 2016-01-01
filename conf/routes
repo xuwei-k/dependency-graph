@@ -3,4 +3,6 @@ GET     /:groupId/:artifactId              dependency_graph.Application.versions
 GET     /:groupId                          dependency_graph.Application.artifacts(groupId, cache: Boolean ?= true)
 POST    /                                  dependency_graph.Application.post
 
+GET     /:groupId/:artifactId/:version/redirect-project-page   dependency_graph.Application.redirectProjectPage(groupId, artifactId, version, cache: Boolean ?= true)
+
 GET     /assets/*file                      controllers.Assets.at(path="/public", file)

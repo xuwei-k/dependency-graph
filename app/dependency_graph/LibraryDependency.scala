@@ -8,6 +8,9 @@ final case class LibraryDependency(
   version: String
 ) {
   override def toString = s"""libraryDependencies += "$groupId" % "$artifactId" % "$version" """
+
+  lazy val pomURL: String =
+    s"http://repo1.maven.org/maven2/${groupId.replace('.', '/')}/${artifactId}/${version}/${artifactId}-${version}.pom"
 }
 
 object LibraryDependency {

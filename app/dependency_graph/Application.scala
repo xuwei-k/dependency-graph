@@ -1,15 +1,19 @@
 package dependency_graph
 
+import java.net.URL
+
 import org.joda.time.DateTime
 import play.api.libs.json.{JsError, JsSuccess}
 import play.api.mvc._
 
 import scalaz.{\/, -\/, \/-}
+import scala.xml.Elem
 
 object Application extends Controller {
   private[this] val cache = Cache.create[Set[LibraryDependency], String](100)
   private[this] val versionsCache = Cache.create[(String, String), List[String]](100)
   private[this] val artifactsCache = Cache.create[String, List[String]](1000)
+  private[this] val pomCache = Cache.create[LibraryDependency, Elem](1000)
 
   private[this] def toResult(either: Either[String, String]) =
     either match {
@@ -27,6 +31,21 @@ object Application extends Controller {
       case e: JsError =>
         BadRequest(e.toString)
     }
+  }
+
+  def redirectProjectPage(g: String, a: String, v: String, useCache: Boolean) = Action {
+    val l = LibraryDependency(g, a, v)
+    val pom = if (useCache) {
+      pomCache.getOrElseUpdate(
+        l,
+        scala.xml.XML.load(new URL(l.pomURL)),
+        DateTime.now().plusMillis(120)
+      )
+    } else {
+      scala.xml.XML.load(new URL(l.pomURL))
+    }
+    val url = DependencyGraph.findURL(pom).getOrElse(l.pomURL)
+    Redirect(url)
   }
 
   def graph(g: String, a: String, v: String, useCache: Boolean) = Action {
