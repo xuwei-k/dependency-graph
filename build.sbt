@@ -27,6 +27,8 @@ lazy val root = Project(
   resolvers += Opts.resolver.sonatypeReleases,
   libraryDependencies ++= (
     ("org.scala-sbt" % "sbt" % sbtVersion.value) ::
+    ("com.github.xuwei-k" %% "play-json-extra" % "0.3.0") ::
+    ("com.github.xuwei-k" %% "httpz-native" % "0.3.0") ::
     ("org.scalatest" %% "scalatest" % "2.2.5" % "test") ::
     Nil
   ),

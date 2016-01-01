@@ -4,9 +4,12 @@ import org.joda.time.DateTime
 import play.api.libs.json.{JsError, JsSuccess}
 import play.api.mvc._
 
+import scalaz.{\/, -\/, \/-}
+
 object Application extends Controller {
   private[this] val cache = Cache.create[Set[LibraryDependency], String](100)
   private[this] val versionsCache = Cache.create[(String, String), List[String]](100)
+  private[this] val artifactsCache = Cache.create[String, List[String]](1000)
 
   private[this] def toResult(either: Either[String, String]) =
     either match {
@@ -65,6 +68,30 @@ object Application extends Controller {
       </body>
     </html>
     Ok(result).as(HTML)
+  }
+
+  def artifacts(groupId: String, cache: Boolean) = Action{
+    val result = if(cache) {
+      artifactsCache.get(groupId).map(\/.right).getOrElse{
+        MavenSearch.searchByGroupId(groupId).map{ a =>
+          artifactsCache.put(groupId, a, DateTime.now().plusMinutes(60))
+          a
+        }
+      }
+    } else {
+      MavenSearch.searchByGroupId(groupId)
+    }
+
+    result match {
+      case \/-(res) =>
+        Ok(<ul>{
+          res.map{ a =>
+            <li><a href={s"http://dependency-graph.herokuapp.com/$groupId/$a"} target="_blank">{a}</a></li>
+          }
+        }</ul>).as(HTML)
+      case -\/(error) =>
+        BadRequest(error.toString)
+    }
   }
 
   def run(dependencies: Set[LibraryDependency]): Either[String, String] =
