@@ -2,7 +2,7 @@
 GET     /                                  dependency_graph.Application.urlList
 GET     /favicon.ico                       dependency_graph.Application.favicon
 
-GET     /gist/:id                          dependency_graph.Application.gist(id)
+GET     /gist/:id                          dependency_graph.Application.gist(id, format: Option[String])
 
 #latest version svg graph
 GET     /:groupId/:artifactId/latest       dependency_graph.Application.latest(groupId, artifactId, cache: Boolean ?= true)

@@ -7,7 +7,7 @@ import sbt.Path._
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.sys.process.{Process, ProcessLogger}
+import scala.sys.process.ProcessLogger
 import scala.util.control.NonFatal
 import scala.xml.{Elem, XML}
 
@@ -16,7 +16,7 @@ object DependencyGraph {
   val pluginSbtContents =
     """addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.7.5")"""
 
-  private[this] val logger = ProcessLogger(println(_))
+  val logger = ProcessLogger(println(_))
 
   private def dependencyDotHeader(title: String) = {
     s"""dependencyDotHeader in Compile := \"\"\"digraph "$title" {
@@ -55,9 +55,9 @@ Seq(Compile, Test, Runtime, Provided, Optional).flatMap{ c =>
   }
 }"""
 
-  private[this] def withTempDirAndDotFile[A](dependencies: Seq[LibraryDependency], title: String)(f: (File, File) => A): A = {
+  private[this] def withTempDirAndDotFile[A](dependencies: Seq[LibraryDependency], title: String, filterRoot: Boolean = true)(f: (File, File) => A): A = {
     val buildDotSbt = defaultBuildDotSbt(title)
-    generate(buildDotSbt + "\n\n" + dependencies.mkString("\n\n"))(f)
+    generate(buildDotSbt + "\n\n" + dependencies.mkString("\n\n"), filterRoot)(f)
   }
 
   def defaultBuildDotSbt(title: String): String = {
@@ -81,32 +81,13 @@ Seq(Compile, Test, Runtime, Provided, Optional).flatMap{ c =>
     }
   }
 
-  val convertSVG: (File, File) => String = { (dir, dot) =>
-    val svg = dir / "graph.svg"
-    Process(Seq("dot", "-o" + svg.getAbsolutePath, "-Tsvg", dot.getAbsolutePath), dir).!(logger)
-    IO.read(svg)
+  def generateFrom(title: String, additionalBuildSettings: String, graphType: GraphType, filterRoot: Boolean = true): graphType.A = {
+    val buildDotSbt = defaultBuildDotSbt(title) + "\n\n" + additionalBuildSettings
+    generate(buildDotSbt, filterRoot)(graphType.generate(_, _))
   }
 
-  def svg(dependencies: Seq[LibraryDependency], title: String): String =
-    withTempDirAndDotFile(dependencies, title)(convertSVG)
-
-  def binary(dependencies: Seq[LibraryDependency], title: String, format: String): Array[Byte] =
-    withTempDirAndDotFile(dependencies, title){ (dir, dot) =>
-      val outputFile = dir / "graph"
-      Process(Seq("dot", "-o" + outputFile.getAbsolutePath, "-T" + format, dot.getAbsolutePath), dir).!(logger)
-      IO.readBytes(outputFile)
-    }
-
-  def png(dependencies: Seq[LibraryDependency], title: String): Array[Byte] =
-    binary(dependencies, title, "png")
-
-  def gif(dependencies: Seq[LibraryDependency], title: String): Array[Byte] =
-    binary(dependencies, title, "gif")
-
-  def dot(dependencies: Seq[LibraryDependency], title: String): String =
-    withTempDirAndDotFile(dependencies, title){ (_, dot) =>
-      IO.read(dot)
-    }
+  def withDependencies(dependencies: Seq[LibraryDependency], title: String, graphType: GraphType, filterRoot: Boolean = true): graphType.A =
+    withTempDirAndDotFile(dependencies, title, filterRoot)(graphType.generate(_, _))
 
   def withStdOut[A](action: => A): (Option[A], String) = {
     val encode = "UTF-8"

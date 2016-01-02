@@ -7,9 +7,7 @@ abstract class GraphGenerator[A] {
 }
 
 object GraphGenerator{
-  abstract class Cached[A] extends GraphGenerator[A] {
-    def cacheMinute: Int
-    def cacheSize: Int
+  abstract class Cached[A](cacheMinute: Int, cacheSize: Int) extends GraphGenerator[A] {
     private[this] val cache = Cache.create[Set[LibraryDependency], A](cacheSize)
 
     def generate(dependencies: Seq[LibraryDependency], title: String): A
@@ -35,35 +33,10 @@ object GraphGenerator{
     }
   }
 
-  class CachedSVG(val cacheMinute: Int, val cacheSize: Int) extends Cached[String]{
-    override def generate(dependencies: Seq[LibraryDependency], title: String) =
-      DependencyGraph.svg(dependencies, title)
-  }
+  def cached[A](cacheMinute: Int, cacheSize: Int, graphType: GraphType.Aux[A]): GraphGenerator[A] =
+    new Cached[A](cacheMinute, cacheSize) {
+      def generate(dependencies: Seq[LibraryDependency], title: String): A =
+        DependencyGraph.withDependencies(dependencies, title, graphType)
+    }
 
-  class CachedPNG(val cacheMinute: Int, val cacheSize: Int) extends Cached[Array[Byte]]{
-    override def generate(dependencies: Seq[LibraryDependency], title: String) =
-      DependencyGraph.png(dependencies, title)
-  }
-
-  class CachedGIF(val cacheMinute: Int, val cacheSize: Int) extends Cached[Array[Byte]]{
-    override def generate(dependencies: Seq[LibraryDependency], title: String) =
-      DependencyGraph.gif(dependencies, title)
-  }
-
-  class CachedDOT(val cacheMinute: Int, val cacheSize: Int) extends Cached[String]{
-    override def generate(dependencies: Seq[LibraryDependency], title: String) =
-      DependencyGraph.dot(dependencies, title)
-  }
-
-  def gif(cacheMinute: Int, cacheSize: Int): GraphGenerator[Array[Byte]] =
-    new CachedGIF(cacheMinute, cacheSize)
-
-  def svg(cacheMinute: Int, cacheSize: Int): GraphGenerator[String] =
-    new CachedSVG(cacheMinute, cacheSize)
-
-  def png(cacheMinute: Int, cacheSize: Int): GraphGenerator[Array[Byte]] =
-    new CachedPNG(cacheMinute, cacheSize)
-
-  def dot(cacheMinute: Int, cacheSize: Int): GraphGenerator[String] =
-    new CachedDOT(cacheMinute, cacheSize)
 }

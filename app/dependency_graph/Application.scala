@@ -3,7 +3,6 @@ package dependency_graph
 import java.net.URL
 
 import org.joda.time.DateTime
-import play.api.http.Writeable
 import play.api.libs.json.{Json, JsError, JsSuccess}
 import play.api.mvc._
 import play.core.routing.HandlerInvoker
@@ -13,23 +12,19 @@ import scala.xml.Elem
 
 object Application extends Controller {
   private object Generators {
-    val png = GraphGenerator.png(60, 100)
-    val svg = GraphGenerator.svg(60, 100)
-    val gif = GraphGenerator.gif(60, 100)
-    val dot = GraphGenerator.dot(60, 100)
+    val png = GraphGenerator.cached(60, 100, GraphType.PNG)
+    val svg = GraphGenerator.cached(60, 100, GraphType.SVG)
+    val gif = GraphGenerator.cached(60, 100, GraphType.GIF)
+    val dot = GraphGenerator.cached(60, 100, GraphType.DOT)
   }
   private[this] val metadataCache = Cache.create[(String, String), Elem](100)
   private[this] val artifactsCache = Cache.create[String, List[String]](1000)
   private[this] val pomCache = Cache.create[LibraryDependency, Elem](1000)
 
-  private[this] val IMAGE_SVG = "image/svg+xml"
-  private[this] val IMAGE_PNG = "image/png"
-  private[this] val IMAGE_GIF = "image/gif"
-
-  private[this] def toResult[A: Writeable](either: Either[String, A], contentType: String) =
+  private[this] def toResult[A](either: Either[String, A], graphType: GraphType.Aux[A]) =
     either match {
       case Right(p) =>
-        Ok(p).as(contentType)
+        graphType.asPlayResult(p)
       case Left(stdout) =>
         InternalServerError(stdout)
     }
@@ -57,7 +52,7 @@ object Application extends Controller {
   val post = Action(parse.tolerantJson) { json =>
     json.body.validate[Seq[LibraryDependency]] match {
       case JsSuccess(dependencies, _) =>
-        toResult(Generators.svg.get(dependencies, "dependency graph", true), IMAGE_SVG)
+        toResult(Generators.svg.get(dependencies, "dependency graph", true), GraphType.SVG)
       case e: JsError =>
         BadRequest(e.toString)
     }
@@ -100,23 +95,23 @@ object Application extends Controller {
   def graph(groupId: String, artifactId: String, version: String, useCache: Boolean) =
     svg(groupId, artifactId, version, useCache)
 
-  def run[A: Writeable](l: LibraryDependency, useCache: Boolean, generator: GraphGenerator[A], contentType: String) = Action{
+  def run[A](l: LibraryDependency, useCache: Boolean, generator: GraphGenerator[A], graphType: GraphType.Aux[A]) = Action{
     val title = s"${l.groupId}/${l.artifactId}/${l.version} dependency graph"
     val result = generator.get(l :: Nil, title, useCache)
-    toResult(result, contentType)
+    toResult(result, graphType)
   }
 
   def gif(groupId: String, artifactId: String, version: String, useCache: Boolean) =
-    run(LibraryDependency(groupId, artifactId, version), useCache, Generators.gif, IMAGE_GIF)
+    run(LibraryDependency(groupId, artifactId, version), useCache, Generators.gif, GraphType.GIF)
 
   def svg(groupId: String, artifactId: String, version: String, useCache: Boolean) =
-    run(LibraryDependency(groupId, artifactId, version), useCache, Generators.svg, IMAGE_SVG)
+    run(LibraryDependency(groupId, artifactId, version), useCache, Generators.svg, GraphType.SVG)
 
   def png(groupId: String, artifactId: String, version: String, useCache: Boolean) =
-    run(LibraryDependency(groupId, artifactId, version), useCache, Generators.png, IMAGE_PNG)
+    run(LibraryDependency(groupId, artifactId, version), useCache, Generators.png, GraphType.PNG)
 
   def dot(groupId: String, artifactId: String, version: String, useCache: Boolean) =
-    run(LibraryDependency(groupId, artifactId, version), useCache, Generators.dot, TEXT)
+    run(LibraryDependency(groupId, artifactId, version), useCache, Generators.dot, GraphType.DOT)
 
   private[this] def metadataWithCache(groupId: String, artifactId: String) = {
     val key = (groupId, artifactId)
@@ -196,16 +191,32 @@ object Application extends Controller {
     Ok("").as(BINARY)
   }
 
-  def gist(id: String) = Action{
+  def gist(id: String, format: Option[String]) = Action{
     Gist.fetch(id) match {
       case \/-(gist) =>
         gist.files.get("build.sbt") match {
           case Some(buildFile) =>
-            val svg = DependencyGraph.generate(
-              buildDotSbt = DependencyGraph.defaultBuildDotSbt(gist.description) + "\n\n" + buildFile.content,
-              filterRoot = false
-            )(DependencyGraph.convertSVG)
-            Ok(svg).as(IMAGE_SVG)
+            val t = format match {
+              case Some(GraphType(x)) =>
+                Right(x)
+              case None =>
+                Right(GraphType.SVG)
+              case Some(invalid) =>
+                Left(invalid)
+            }
+
+            t match {
+              case Right(tpe) =>
+                val graph: tpe.A = DependencyGraph.generateFrom(
+                  title = gist.description,
+                  additionalBuildSettings = buildFile.content,
+                  graphType = tpe,
+                  filterRoot = false
+                )
+                tpe.asPlayResult(graph)
+              case Left(invalid) =>
+                BadRequest(s"invalid format $invalid")
+            }
           case None =>
             NotFound("could not found `build.sbt`")
         }
