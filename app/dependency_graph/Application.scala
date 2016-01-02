@@ -102,26 +102,33 @@ object Application extends Controller {
     }
     val list = (xml \\ "version").map(_.text).toList.sorted
 
-    val urlList = {
-      <li>
-        <a href={routes.Application.latest(groupId, artifactId, useCache).url} target="_blank">latest</a>
-      </li>
-    } :: {
-      list.map { v =>
+    if(list.nonEmpty) {
+      val urlList = {
         <li>
-          <a href={routes.Application.graph(groupId, artifactId, v).url} target="_blank">
-            {v}
-          </a>
+          <a href={routes.Application.latest(groupId, artifactId, useCache).url} target="_blank">latest</a>
         </li>
+      } :: {
+        list.map { v =>
+          <li>
+            <a href={routes.Application.graph(groupId, artifactId, v).url} target="_blank">
+              {v}
+            </a>
+          </li>
+        }
       }
-    }
 
-    val result = <html>
-      <body>
-        <ul>{urlList}</ul>
-      </body>
-    </html>
-    Ok(result).as(HTML)
+      val result = <html>
+        <body>
+          <ul>
+            {urlList}
+          </ul>
+        </body>
+      </html>
+      Ok(result).as(HTML)
+    } else {
+      val result = <p>{"Not found. See "}<a href={routes.Application.artifacts(groupId).url}>artifacts for "{groupId}"</a></p>
+      NotFound(result).as(HTML)
+    }
   }
 
   def artifacts(groupId: String, cache: Boolean) = Action{
