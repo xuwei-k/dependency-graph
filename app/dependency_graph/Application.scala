@@ -109,7 +109,7 @@ object Application extends Controller {
     } :: {
       list.map { v =>
         <li>
-          <a href={s"http://dependency-graph.herokuapp.com/$groupId/$artifactId/$v"} target="_blank">
+          <a href={routes.Application.graph(groupId, artifactId, v).url} target="_blank">
             {v}
           </a>
         </li>
@@ -140,7 +140,7 @@ object Application extends Controller {
       case \/-(res) =>
         Ok(<ul>{
           res.map{ a =>
-            <li><a href={s"http://dependency-graph.herokuapp.com/$groupId/$a"} target="_blank">{a}</a></li>
+            <li><a href={routes.Application.versions(groupId, a, cache).url} target="_blank">{a}</a></li>
           }
         }</ul>).as(HTML)
       case -\/(error) =>
