@@ -1,3 +1,4 @@
+GET     /:groupId/:artifactId/latest       dependency_graph.Application.latest(groupId, artifactId, cache: Boolean ?= true)
 GET     /:groupId/:artifactId/:version     dependency_graph.Application.graph(groupId, artifactId, version, cache: Boolean ?= true)
 GET     /:groupId/:artifactId              dependency_graph.Application.versions(groupId, artifactId, cache: Boolean ?= true)
 GET     /:groupId                          dependency_graph.Application.artifacts(groupId, cache: Boolean ?= true)

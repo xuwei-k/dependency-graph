@@ -100,7 +100,10 @@ Seq(Compile, Test, Runtime, Provided, Optional).flatMap{ c =>
     }
   }
 
-  private[this] def metadataXml(baseUrl: String, groupId: String, artifactId: String): Option[Elem] =
+  def metadataXmlFromCentral(groupId: String, artifactId: String): Option[Elem] =
+    metadataXml("http://repo1.maven.org/maven2", groupId, artifactId)
+
+  def metadataXml(baseUrl: String, groupId: String, artifactId: String): Option[Elem] =
     try {
       val url = s"$baseUrl/${groupId.replace('.', '/')}/$artifactId/maven-metadata.xml"
       Some(XML.load(url))
@@ -110,14 +113,6 @@ Seq(Compile, Test, Runtime, Provided, Optional).flatMap{ c =>
       case NonFatal(e) =>
         e.printStackTrace()
         None
-    }
-
-  def versions(baseUrl: String, org: String, name: String): List[String] =
-    metadataXml(baseUrl, org, name) match {
-      case Some(x) =>
-        (x \\ "version").map(_.text).toList.sorted
-      case None =>
-        Nil
     }
 
   def findURL(pom: Elem): Option[String] = {
