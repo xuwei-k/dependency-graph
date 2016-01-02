@@ -27,7 +27,7 @@ object Application extends Controller {
   val post = Action(parse.tolerantJson) { json =>
     json.body.validate[Set[LibraryDependency]] match {
       case JsSuccess(dependencies, _) =>
-        toResult(run(dependencies))
+        toResult(run(dependencies, "dependency graph"))
       case e: JsError =>
         BadRequest(e.toString)
     }
@@ -68,15 +68,17 @@ object Application extends Controller {
   }
 
   def graph(g: String, a: String, v: String, useCache: Boolean) = Action {
-    val set = Set(LibraryDependency(g, a, v))
+    val l = LibraryDependency(g, a, v)
+    val set = Set(l)
+    val title = s"${l.groupId}/${l.artifactId}/${l.version} dependency graph"
     val result = if (useCache) {
       cache.get(set).map(Right(_)).getOrElse {
-        run(set).right.map { svg =>
+        run(set, title).right.map { svg =>
           cache.getOrElseUpdate(set, svg, DateTime.now().plusMinutes(30))
         }
       }
     } else {
-      run(set)
+      run(set, title)
     }
     toResult(result)
   }
@@ -155,9 +157,9 @@ object Application extends Controller {
     }
   }
 
-  def run(dependencies: Set[LibraryDependency]): Either[String, String] =
+  def run(dependencies: Set[LibraryDependency], title: String): Either[String, String] =
     DependencyGraph.withStdOut {
-      DependencyGraph.generate(dependencies.toSeq)
+      DependencyGraph.generate(dependencies.toSeq, title)
     } match {
       case (Some(svg), _) =>
         cache.put(dependencies, svg, DateTime.now().plusMinutes(30))

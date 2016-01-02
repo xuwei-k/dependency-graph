@@ -18,6 +18,17 @@ object DependencyGraph {
 
   private[this] val logger = ProcessLogger(println(_))
 
+  private def dependencyDotHeader(title: String) = {
+    s"""dependencyDotHeader in Compile := \"\"\"digraph "$title" {
+      graph[rankdir="LR"]
+      node [
+        shape="record"
+      ]
+      edge [
+        arrowtail="none"
+      ]\"\"\""""
+  }
+
   private val baseSettings = """graphSettings
 
 Seq(Compile, Test, Runtime, Provided, Optional).flatMap{ c =>
@@ -44,12 +55,13 @@ Seq(Compile, Test, Runtime, Provided, Optional).flatMap{ c =>
   }
 }"""
 
-  def generate(dependencies: Seq[LibraryDependency]): String = {
+  def generate(dependencies: Seq[LibraryDependency], title: String): String = {
     IO.withTemporaryDirectory { dir =>
       val project = dir / "project"
       IO.createDirectory(project)
       IO.write(project / "p.sbt", pluginSbtContents)
-      IO.write(dir / "build.sbt", (baseSettings +: dependencies).mkString("\n\n"))
+      val buildDotSbt = (baseSettings +: dependencyDotHeader(title) +: dependencies).mkString("\n\n")
+      IO.write(dir / "build.sbt", buildDotSbt)
       val args = new xsbt.boot.LauncherArguments("dependencyDot" :: Nil, false)
       println(xsbt.boot.Launch(dir, args))
       val svg = dir / "graph.svg"
