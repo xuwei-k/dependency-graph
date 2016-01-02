@@ -73,22 +73,37 @@ object Application extends Controller {
     Redirect(url)
   }
 
-  def latest(groupId: String, artifactId: String, useCache: Boolean) = Action {
-    val xml = if(useCache) {
-      metadataWithCache(groupId, artifactId)
-    } else {
-      DependencyGraph.metadataXmlFromCentral(
-        groupId,
-        artifactId
-      )
-    }
-    val latestVersion = (xml.toList \ "versioning" \ "latest").text
-    if(latestVersion.nonEmpty) {
-      Redirect(routes.Application.graph(groupId, artifactId, latestVersion, useCache))
-    } else {
-      NotFound(
-        <p>{"not found latest version of "}<pre>{s""""$groupId" % "$artifactId""""}</pre></p>
-      ).as(HTML)
+  def latest(groupId: String, artifactId: String, useCache: Boolean, format: Option[String]) = Action {
+    GraphType.parseWithDefault(format) match {
+      case Right(t) =>
+        val xml = if (useCache) {
+          metadataWithCache(groupId, artifactId)
+        } else {
+          DependencyGraph.metadataXmlFromCentral(
+            groupId,
+            artifactId
+          )
+        }
+        val latestVersion = (xml.toList \ "versioning" \ "latest").text
+        if (latestVersion.nonEmpty) {
+          val r = t match {
+            case GraphType.DOT =>
+              routes.Application.dot(groupId, artifactId, latestVersion, useCache)
+            case GraphType.GIF =>
+              routes.Application.gif(groupId, artifactId, latestVersion, useCache)
+            case GraphType.PNG =>
+              routes.Application.png(groupId, artifactId, latestVersion, useCache)
+            case GraphType.SVG =>
+              routes.Application.svg(groupId, artifactId, latestVersion, useCache)
+          }
+          Redirect(r)
+        } else {
+          NotFound(<p>
+            {"not found latest version of "}<pre>{s""""$groupId" % "$artifactId""""}</pre>
+          </p>).as(HTML)
+        }
+      case Left(invalid) =>
+        BadRequest(s"invalid format $invalid")
     }
   }
 
@@ -137,7 +152,7 @@ object Application extends Controller {
     if(list.nonEmpty) {
       val urlList = {
         <li>
-          <a href={routes.Application.latest(groupId, artifactId, useCache).url} target="_blank">latest</a>
+          <a href={routes.Application.latest(groupId, artifactId, useCache, GraphType.SVG.idOpt).url} target="_blank">latest</a>
         </li>
       } :: {
         list.map { v =>
@@ -196,16 +211,7 @@ object Application extends Controller {
       case \/-(gist) =>
         gist.files.get("build.sbt") match {
           case Some(buildFile) =>
-            val t = format match {
-              case Some(GraphType(x)) =>
-                Right(x)
-              case None =>
-                Right(GraphType.SVG)
-              case Some(invalid) =>
-                Left(invalid)
-            }
-
-            t match {
+            GraphType.parseWithDefault(format) match {
               case Right(tpe) =>
                 val graph: tpe.A = DependencyGraph.generateFrom(
                   title = gist.description,

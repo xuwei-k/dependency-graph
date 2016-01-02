@@ -7,7 +7,8 @@ import play.api.mvc.{Results, Result}
 import scala.sys.process.Process
 import sbt.Path._
 
-sealed abstract class GraphType extends Product with Serializable {
+sealed abstract class GraphType(val id: String) extends Product with Serializable {
+  val idOpt: Option[String] = Some(id)
   type A
   def generate(tempDir: File, dot: File): A
   def asPlayResult(a: A): Result
@@ -22,7 +23,7 @@ object GraphType {
     sbt.IO.readBytes(outputFile)
   }
 
-  case object SVG extends GraphType {
+  case object SVG extends GraphType("svg") {
     type A = String
     override def generate(tempDir: File, dot: File) = {
       val svg = tempDir / "graph.svg"
@@ -34,7 +35,7 @@ object GraphType {
       Results.Ok(a).as("image/svg+xml")
   }
 
-  case object DOT extends GraphType {
+  case object DOT extends GraphType("dot") {
     type A = String
     override def generate(tempDir: File, dot: File) = {
       sbt.IO.read(dot)
@@ -44,7 +45,7 @@ object GraphType {
       Results.Ok(a)
   }
 
-  case object GIF extends GraphType {
+  case object GIF extends GraphType("gif") {
     type A = Array[Byte]
     override def generate(tempDir: File, dot: File) =
       binary(tempDir, dot, "gif")
@@ -53,7 +54,7 @@ object GraphType {
       Results.Ok(a).as("image/gif")
   }
 
-  case object PNG extends GraphType {
+  case object PNG extends GraphType("png") {
     type A = Array[Byte]
     override def generate(tempDir: File, dot: File) =
       binary(tempDir, dot, "png")
@@ -62,11 +63,19 @@ object GraphType {
       Results.Ok(a).as("image/png")
   }
 
+  val all: Set[GraphType] = Set(SVG, GIF, PNG, DOT)
+  val map: Map[String, GraphType] = all.map(a => a.id -> a)(collection.breakOut)
+
   def unapply(name: String): Option[GraphType] =
-    PartialFunction.condOpt(name) {
-      case "svg" => SVG
-      case "gif" => GIF
-      case "png" => PNG
-      case "dot" => DOT
+    map.get(name)
+
+  def parseWithDefault(name: Option[String]): Either[String, GraphType] =
+    name match {
+      case Some(GraphType(x)) =>
+        Right(x)
+      case None =>
+        Right(GraphType.SVG)
+      case Some(invalid) =>
+        Left(invalid)
     }
 }
