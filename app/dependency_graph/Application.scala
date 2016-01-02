@@ -3,6 +3,7 @@ package dependency_graph
 import java.net.URL
 
 import org.joda.time.DateTime
+import play.api.http.Writeable
 import play.api.libs.json.{JsError, JsSuccess}
 import play.api.mvc._
 
@@ -10,24 +11,32 @@ import scalaz.{\/, -\/, \/-}
 import scala.xml.Elem
 
 object Application extends Controller {
-  private[this] val cache = Cache.create[Set[LibraryDependency], String](100)
+  private object Generators {
+    val png = GraphGenerator.png(60, 100)
+    val svg = GraphGenerator.svg(60, 100)
+    val gif = GraphGenerator.gif(60, 100)
+    val dot = GraphGenerator.dot(60, 100)
+  }
   private[this] val metadataCache = Cache.create[(String, String), Elem](100)
   private[this] val artifactsCache = Cache.create[String, List[String]](1000)
   private[this] val pomCache = Cache.create[LibraryDependency, Elem](1000)
 
-  private[this] def toResult(either: Either[String, String]) =
+  private[this] val IMAGE_SVG = "image/svg+xml"
+  private[this] val IMAGE_PNG = "image/png"
+  private[this] val IMAGE_GIF = "image/gif"
+
+  private[this] def toResult[A: Writeable](either: Either[String, A], contentType: String) =
     either match {
-      case Right(svg) =>
-        println("cache = " + cache)
-        Ok(svg).as("image/svg+xml")
+      case Right(p) =>
+        Ok(p).as(contentType)
       case Left(stdout) =>
         InternalServerError(stdout)
     }
 
   val post = Action(parse.tolerantJson) { json =>
-    json.body.validate[Set[LibraryDependency]] match {
+    json.body.validate[Seq[LibraryDependency]] match {
       case JsSuccess(dependencies, _) =>
-        toResult(run(dependencies, "dependency graph"))
+        toResult(Generators.svg.get(dependencies, "dependency graph", true), IMAGE_SVG)
       case e: JsError =>
         BadRequest(e.toString)
     }
@@ -67,21 +76,26 @@ object Application extends Controller {
     }
   }
 
-  def graph(g: String, a: String, v: String, useCache: Boolean) = Action {
-    val l = LibraryDependency(g, a, v)
-    val set = Set(l)
+  def graph(groupId: String, artifactId: String, version: String, useCache: Boolean) =
+    svg(groupId, artifactId, version, useCache)
+
+  def run[A: Writeable](l: LibraryDependency, useCache: Boolean, generator: GraphGenerator[A], contentType: String) = Action{
     val title = s"${l.groupId}/${l.artifactId}/${l.version} dependency graph"
-    val result = if (useCache) {
-      cache.get(set).map(Right(_)).getOrElse {
-        run(set, title).right.map { svg =>
-          cache.getOrElseUpdate(set, svg, DateTime.now().plusMinutes(30))
-        }
-      }
-    } else {
-      run(set, title)
-    }
-    toResult(result)
+    val result = generator.get(l :: Nil, title, useCache)
+    toResult(result, contentType)
   }
+
+  def gif(groupId: String, artifactId: String, version: String, useCache: Boolean) =
+    run(LibraryDependency(groupId, artifactId, version), useCache, Generators.gif, IMAGE_GIF)
+
+  def svg(groupId: String, artifactId: String, version: String, useCache: Boolean) =
+    run(LibraryDependency(groupId, artifactId, version), useCache, Generators.svg, IMAGE_SVG)
+
+  def png(groupId: String, artifactId: String, version: String, useCache: Boolean) =
+    run(LibraryDependency(groupId, artifactId, version), useCache, Generators.png, IMAGE_PNG)
+
+  def dot(groupId: String, artifactId: String, version: String, useCache: Boolean) =
+    run(LibraryDependency(groupId, artifactId, version), useCache, Generators.dot, TEXT)
 
   private[this] def metadataWithCache(groupId: String, artifactId: String) = {
     val key = (groupId, artifactId)
@@ -156,16 +170,5 @@ object Application extends Controller {
         BadRequest(error.toString)
     }
   }
-
-  def run(dependencies: Set[LibraryDependency], title: String): Either[String, String] =
-    DependencyGraph.withStdOut {
-      DependencyGraph.generate(dependencies.toSeq, title)
-    } match {
-      case (Some(svg), _) =>
-        cache.put(dependencies, svg, DateTime.now().plusMinutes(30))
-        Right(svg)
-      case (None, stdout) =>
-        Left(stdout)
-    }
 
 }

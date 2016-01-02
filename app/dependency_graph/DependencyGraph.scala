@@ -1,6 +1,6 @@
 package dependency_graph
 
-import java.io.{ByteArrayOutputStream, PrintStream}
+import java.io.{File, ByteArrayOutputStream, PrintStream}
 
 import sbt.IO
 import sbt.Path._
@@ -55,7 +55,7 @@ Seq(Compile, Test, Runtime, Provided, Optional).flatMap{ c =>
   }
 }"""
 
-  def generate(dependencies: Seq[LibraryDependency], title: String): String = {
+  private[this] def withTempDirAndDotFile[A](dependencies: Seq[LibraryDependency], title: String)(f: (File, File) => A): A = {
     IO.withTemporaryDirectory { dir =>
       val project = dir / "project"
       IO.createDirectory(project)
@@ -64,17 +64,41 @@ Seq(Compile, Test, Runtime, Provided, Optional).flatMap{ c =>
       IO.write(dir / "build.sbt", buildDotSbt)
       val args = new xsbt.boot.LauncherArguments("dependencyDot" :: Nil, false)
       println(xsbt.boot.Launch(dir, args))
-      val svg = dir / "graph.svg"
       val dot = dir / "target" / "dependencies-compile.dot"
       if (!dot.isFile) {
         println("failed to write dot file? " + dependencies)
       }
       val dotLines = IO.readLines(dot)
       IO.write(dot, dotLines.filterNot(_.contains("default:sbt_")).mkString("\n"))
+      f(dir, dot)
+    }
+  }
+
+  def svg(dependencies: Seq[LibraryDependency], title: String): String = {
+    withTempDirAndDotFile(dependencies, title){ (dir, dot) =>
+      val svg = dir / "graph.svg"
       Process(Seq("dot", "-o" + svg.getAbsolutePath, "-Tsvg", dot.getAbsolutePath), dir).!(logger)
       IO.read(svg)
     }
   }
+
+  def binary(dependencies: Seq[LibraryDependency], title: String, format: String): Array[Byte] =
+    withTempDirAndDotFile(dependencies, title){ (dir, dot) =>
+      val outputFile = dir / "graph"
+      Process(Seq("dot", "-o" + outputFile.getAbsolutePath, "-T" + format, dot.getAbsolutePath), dir).!(logger)
+      IO.readBytes(outputFile)
+    }
+
+  def png(dependencies: Seq[LibraryDependency], title: String): Array[Byte] =
+    binary(dependencies, title, "png")
+
+  def gif(dependencies: Seq[LibraryDependency], title: String): Array[Byte] =
+    binary(dependencies, title, "gif")
+
+  def dot(dependencies: Seq[LibraryDependency], title: String): String =
+    withTempDirAndDotFile(dependencies, title){ (_, dot) =>
+      IO.read(dot)
+    }
 
   def withStdOut[A](action: => A): (Option[A], String) = {
     val encode = "UTF-8"
