@@ -4,8 +4,9 @@ import java.net.URL
 
 import org.joda.time.DateTime
 import play.api.http.Writeable
-import play.api.libs.json.{JsError, JsSuccess}
+import play.api.libs.json.{Json, JsError, JsSuccess}
 import play.api.mvc._
+import play.core.routing.HandlerInvoker
 
 import scalaz.{\/, -\/, \/-}
 import scala.xml.Elem
@@ -32,6 +33,26 @@ object Application extends Controller {
       case Left(stdout) =>
         InternalServerError(stdout)
     }
+
+  private[this] val methods: List[Map[String, String]] = {
+    import scala.language.reflectiveCalls
+    val urlKey = "url"
+    router.Routes.getClass.getMethods.filter { m =>
+      m.getReturnType == classOf[HandlerInvoker[_]] && m.getParameterCount == 0
+    }.map { m =>
+      m.invoke(router.Routes).asInstanceOf[{def cachedHandlerTags: Map[String, String]}].cachedHandlerTags.collect{
+        case ("ROUTE_COMMENTS", value) => ("description", value)
+        case ("ROUTE_PATTERN", value) => (urlKey, value)
+        case ("ROUTE_VERB", value) => ("method", value)
+      }
+    }.filterNot{ map =>
+      Set("/favicon.ico").exists(ignore => Some(ignore) == map.get(urlKey))
+    }.toList
+  }
+
+  private[this] val urlListResponse = Ok(Json.toJson(methods))
+
+  val urlList = Action{urlListResponse}
 
   val post = Action(parse.tolerantJson) { json =>
     json.body.validate[Seq[LibraryDependency]] match {
