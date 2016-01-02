@@ -1,15 +1,9 @@
 package dependency_graph
 
-import play.api.libs.json.{Json, Format, JsValue, Writes}
+import play.api.libs.json.{Format, Json}
 import play.jsonext._
 
 import scalaz.\/
-
-
-abstract class JsonToString[A <: JsonToString[A]](implicit A: Writes[A]) { self: A =>
-  def toJson: JsValue = A.writes(this)
-  override def toString = toJson.toString
-}
 
 final case class MavenSearch(response: Response) extends JsonToString[MavenSearch]
 
