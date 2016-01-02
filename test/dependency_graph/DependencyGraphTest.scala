@@ -20,13 +20,33 @@ final class DependencyGraphTest extends FunSpec {
       val a2 = DependencyGraph.withDependencies(play :: Nil, title, GraphType.DOT, false)
       assert(a1.length < a2.length)
     }
-    it("svg") {
-      val a1 = DependencyGraph.withDependencies(play :: Nil, title, GraphType.SVG, true)
-      println(a1)
-      val x = XML.loadString(a1)
-      assert((x \ "g" \ "title").text === title)
-      val a2 = DependencyGraph.withDependencies(play :: Nil, title, GraphType.SVG, false)
-      assert(a1.length < a2.length)
+    describe("svg") {
+      val redirect = DependencyGraph.svg(play :: Nil, title, LinkType.Redirect, true)
+      val none = DependencyGraph.svg(play :: Nil, title, LinkType.None, false)
+      val embed = DependencyGraph.svg(play :: Nil, title, LinkType.Embed, false)
+      val playURL = "playframework.com"
+      val redirectURL = "redirect-project-page"
+      it("filterRoot") {
+        val x = XML.loadString(redirect)
+        assert((x \ "g" \ "title").text === title)
+        val redirectRoot = DependencyGraph.svg(play :: Nil, title, LinkType.Redirect, false)
+        assert(redirect.length < redirectRoot.length)
+      }
+      it("redirect") {
+        assert(!redirect.contains(playURL))
+        assert(redirect.contains(redirectURL))
+      }
+      it("link none") {
+        assert(redirect.length > none.length)
+        assert(!none.contains(playURL))
+        assert(!none.contains(redirectURL))
+      }
+      it("link embed") {
+        assert(embed.length > none.length)
+        assert(embed != redirect)
+        assert(embed.contains(playURL))
+        assert(!embed.contains(redirectURL))
+      }
     }
     it("png") {
       val a1 = DependencyGraph.withDependencies(play :: Nil, title, GraphType.PNG, true)

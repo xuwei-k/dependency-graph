@@ -5,10 +5,10 @@ GET     /favicon.ico                       dependency_graph.Application.favicon
 GET     /gist/:id                          dependency_graph.Application.gist(id, format: Option[String])
 
 #latest version svg graph
-GET     /:groupId/:artifactId/latest       dependency_graph.Application.latest(groupId, artifactId, cache: Boolean ?= true, format: Option[String])
+GET     /:groupId/:artifactId/latest       dependency_graph.Application.latest(groupId, artifactId, cache: Boolean ?= true, format: Option[String], link: Option[String])
 
 #svg dependency graph
-GET     /:groupId/:artifactId/:version.svg dependency_graph.Application.svg(groupId, artifactId, version, cache: Boolean ?= true)
+GET     /:groupId/:artifactId/:version.svg dependency_graph.Application.svg(groupId, artifactId, version, cache: Boolean ?= true, link: Option[String])
 
 #png dependency graph
 GET     /:groupId/:artifactId/:version.png dependency_graph.Application.png(groupId, artifactId, version, cache: Boolean ?= true)
@@ -19,7 +19,7 @@ GET     /:groupId/:artifactId/:version.gif dependency_graph.Application.gif(grou
 GET     /:groupId/:artifactId/:version.dot dependency_graph.Application.dot(groupId, artifactId, version, cache: Boolean ?= true)
 
 #svg dependency graph. alias
-GET     /:groupId/:artifactId/:version     dependency_graph.Application.graph(groupId, artifactId, version, cache: Boolean ?= true)
+GET     /:groupId/:artifactId/:version     dependency_graph.Application.graph(groupId, artifactId, version, cache: Boolean ?= true, link: Option[String])
 
 #return versions
 GET     /:groupId/:artifactId              dependency_graph.Application.versions(groupId, artifactId, cache: Boolean ?= true)

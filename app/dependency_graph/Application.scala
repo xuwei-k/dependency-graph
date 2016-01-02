@@ -13,7 +13,7 @@ import scala.xml.Elem
 object Application extends Controller {
   private object Generators {
     val png = GraphGenerator.cached(60, 100, GraphType.PNG)
-    val svg = GraphGenerator.cached(60, 100, GraphType.SVG)
+    val svg = GraphGenerator.svg(60, 100)
     val gif = GraphGenerator.cached(60, 100, GraphType.GIF)
     val dot = GraphGenerator.cached(60, 100, GraphType.DOT)
   }
@@ -52,7 +52,8 @@ object Application extends Controller {
   val post = Action(parse.tolerantJson) { json =>
     json.body.validate[Seq[LibraryDependency]] match {
       case JsSuccess(dependencies, _) =>
-        toResult(Generators.svg.get(dependencies, "dependency graph", true), GraphType.SVG)
+        val link = LinkType.Redirect // TODO
+        toResult(Generators.svg.get((dependencies, "dependency graph", link), true), GraphType.SVG)
       case e: JsError =>
         BadRequest(e.toString)
     }
@@ -73,7 +74,7 @@ object Application extends Controller {
     Redirect(url)
   }
 
-  def latest(groupId: String, artifactId: String, useCache: Boolean, format: Option[String]) = Action {
+  def latest(groupId: String, artifactId: String, useCache: Boolean, format: Option[String], link: Option[String]) = Action {
     GraphType.parseWithDefault(format) match {
       case Right(t) =>
         val xml = if (useCache) {
@@ -94,7 +95,8 @@ object Application extends Controller {
             case GraphType.PNG =>
               routes.Application.png(groupId, artifactId, latestVersion, useCache)
             case GraphType.SVG =>
-              routes.Application.svg(groupId, artifactId, latestVersion, useCache)
+              val l = link.flatMap(LinkType.unapply).map(_.value)
+              routes.Application.svg(groupId, artifactId, latestVersion, useCache, l)
           }
           Redirect(r)
         } else {
@@ -107,20 +109,29 @@ object Application extends Controller {
     }
   }
 
-  def graph(groupId: String, artifactId: String, version: String, useCache: Boolean) =
-    svg(groupId, artifactId, version, useCache)
+  def graph(groupId: String, artifactId: String, version: String, useCache: Boolean, link: Option[String]) =
+    svg(groupId, artifactId, version, useCache, link)
 
-  def run[A](l: LibraryDependency, useCache: Boolean, generator: GraphGenerator[A], graphType: GraphType.Aux[A]) = Action{
+  def run[A](l: LibraryDependency, useCache: Boolean, generator: GraphGenerator[(Seq[LibraryDependency], String), A], graphType: GraphType.Aux[A], link: LinkType = LinkType.Redirect) = Action{
     val title = s"${l.groupId}/${l.artifactId}/${l.version} dependency graph"
-    val result = generator.get(l :: Nil, title, useCache)
+    val result = generator.get((l :: Nil, title), useCache)
     toResult(result, graphType)
   }
 
   def gif(groupId: String, artifactId: String, version: String, useCache: Boolean) =
     run(LibraryDependency(groupId, artifactId, version), useCache, Generators.gif, GraphType.GIF)
 
-  def svg(groupId: String, artifactId: String, version: String, useCache: Boolean) =
-    run(LibraryDependency(groupId, artifactId, version), useCache, Generators.svg, GraphType.SVG)
+  def svg(groupId: String, artifactId: String, version: String, useCache: Boolean, link: Option[String]) = Action{
+    LinkType.from(link) match {
+      case Right(l) =>
+        val dep = LibraryDependency(groupId, artifactId, version)
+        val title = s"${dep.groupId}/${dep.artifactId}/${dep.version} dependency graph"
+        val result = Generators.svg.get((dep :: Nil, title, l), useCache)
+        toResult(result, GraphType.SVG)
+      case Left(invalid) =>
+        BadRequest(s"invalid link parameter $invalid")
+    }
+  }
 
   def png(groupId: String, artifactId: String, version: String, useCache: Boolean) =
     run(LibraryDependency(groupId, artifactId, version), useCache, Generators.png, GraphType.PNG)
@@ -152,12 +163,12 @@ object Application extends Controller {
     if(list.nonEmpty) {
       val urlList = {
         <li>
-          <a href={routes.Application.latest(groupId, artifactId, useCache, GraphType.SVG.idOpt).url} target="_blank">latest</a>
+          <a href={routes.Application.latest(groupId, artifactId, useCache, GraphType.SVG.idOpt, None).url} target="_blank">latest</a>
         </li>
       } :: {
         list.map { v =>
           <li>
-            <a href={routes.Application.graph(groupId, artifactId, v).url} target="_blank">
+            <a href={routes.Application.graph(groupId, artifactId, v, true, Some(LinkType.Redirect.value)).url} target="_blank">
               {v}
             </a>
           </li>

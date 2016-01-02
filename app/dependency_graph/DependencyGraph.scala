@@ -29,16 +29,40 @@ object DependencyGraph {
       ]\"\"\""""
   }
 
-  private val baseSettings = """graphSettings
+  private[this] val findURLMethod = """def findURL(g: String, a: String, v: String): String = {
+  val u = s"http://repo1.maven.org/maven2/${g.replace('.', '/')}/${a}/${v}/${a}-${v}.pom"
+  try{
+    val pom = scala.xml.XML.load(url(u))
+    List(
+      pom \ "url",
+      pom \ "scm" \ "url",
+      pom \ "organization" \ "url"
+    ).foldLeft(Option.empty[String]){
+      case (None, elem) =>
+        val url = elem.text
+        if(url.startsWith("http")){
+          Some(url)
+        } else {
+          None
+        }
+      case (a @ Some(_), _) =>
+        a
+    }.getOrElse(u)
+  }catch{
+    case scala.util.control.NonFatal(_) =>
+      u
+  }
+}"""
+
+  private def baseSettings(node: String) = """graphSettings
 
 Seq(Compile, Test, Runtime, Provided, Optional).flatMap{ c =>
   inConfig(c){
     dependencyDot := {
-      val nodes = moduleGraph.value.nodes.map{ n =>
+      val nodes = moduleGraph.value.nodes.par.map{ n =>
         val fullId = n.id.organisation + "/" + n.id.name + "/" + n.id.version
         "  \"" + n.id.idString + "\"" +
-        "[label=<" + n.id.organisation + "<BR/><B>" + n.id.name + "</B><BR/>" + n.id.version + ">" +
-        ", href=\"http://dependency-graph.herokuapp.com/" + fullId + "/redirect-project-page\"" +
+        "[label=<" + n.id.organisation + "<BR/><B>" + n.id.name + "</B><BR/>" + n.id.version + ">" + """ + node + """ +
         ", target=\"_blank\"" +
         ", tooltip=\"" + fullId + "\"" +
         "]"
@@ -55,13 +79,23 @@ Seq(Compile, Test, Runtime, Provided, Optional).flatMap{ c =>
   }
 }"""
 
+  private val redirect = baseSettings(
+    """ ", href=\"http://dependency-graph.herokuapp.com/" + fullId + "/redirect-project-page\"" """
+  )
+
+  private val embed = findURLMethod + "\n\n" + baseSettings(
+    """ ", href=\"" + findURL(n.id.organisation, n.id.name, n.id.version) + "\"" """
+  )
+
+  private val noLink = baseSettings("\"\"")
+
   private[this] def withTempDirAndDotFile[A](dependencies: Seq[LibraryDependency], title: String, filterRoot: Boolean = true)(f: (File, File) => A): A = {
     val buildDotSbt = defaultBuildDotSbt(title)
     generate(buildDotSbt + "\n\n" + dependencies.mkString("\n\n"), filterRoot)(f)
   }
 
   def defaultBuildDotSbt(title: String): String = {
-    List(baseSettings, dependencyDotHeader(title)).mkString("\n\n")
+    List(redirect, dependencyDotHeader(title)).mkString("\n\n")
   }
 
   def generate[A](buildDotSbt: String, filterRoot: Boolean = true)(f: (File, File) => A): A = {
@@ -88,6 +122,16 @@ Seq(Compile, Test, Runtime, Provided, Optional).flatMap{ c =>
 
   def withDependencies(dependencies: Seq[LibraryDependency], title: String, graphType: GraphType, filterRoot: Boolean = true): graphType.A =
     withTempDirAndDotFile(dependencies, title, filterRoot)(graphType.generate(_, _))
+
+  def svg(dependencies: Seq[LibraryDependency], title: String, link: LinkType, filterRoot: Boolean = true): String = {
+    val a = link match {
+      case LinkType.Redirect => redirect
+      case LinkType.Embed => embed
+      case LinkType.None => noLink
+    }
+    val buildDotSbt = List(a, dependencyDotHeader(title)).mkString("\n\n")
+    generate(buildDotSbt + "\n\n" + dependencies.mkString("\n\n"), filterRoot)(GraphType.SVG.generate(_, _))
+  }
 
   def withStdOut[A](action: => A): (Option[A], String) = {
     val encode = "UTF-8"
