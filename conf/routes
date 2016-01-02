@@ -1,3 +1,4 @@
+GET     /favicon.ico                       dependency_graph.Application.favicon
 GET     /:groupId/:artifactId/latest       dependency_graph.Application.latest(groupId, artifactId, cache: Boolean ?= true)
 GET     /:groupId/:artifactId/:version.svg dependency_graph.Application.svg(groupId, artifactId, version, cache: Boolean ?= true)
 GET     /:groupId/:artifactId/:version.png dependency_graph.Application.png(groupId, artifactId, version, cache: Boolean ?= true)

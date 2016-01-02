@@ -171,4 +171,7 @@ object Application extends Controller {
     }
   }
 
+  val favicon = Action{
+    Ok("").as(BINARY)
+  }
 }
