@@ -56,31 +56,39 @@ Seq(Compile, Test, Runtime, Provided, Optional).flatMap{ c =>
 }"""
 
   private[this] def withTempDirAndDotFile[A](dependencies: Seq[LibraryDependency], title: String)(f: (File, File) => A): A = {
+    val buildDotSbt = defaultBuildDotSbt(title)
+    generate(buildDotSbt + "\n\n" + dependencies.mkString("\n\n"))(f)
+  }
+
+  def defaultBuildDotSbt(title: String): String = {
+    List(baseSettings, dependencyDotHeader(title)).mkString("\n\n")
+  }
+
+  def generate[A](buildDotSbt: String, filterRoot: Boolean = true)(f: (File, File) => A): A = {
     IO.withTemporaryDirectory { dir =>
       val project = dir / "project"
       IO.createDirectory(project)
       IO.write(project / "p.sbt", pluginSbtContents)
-      val buildDotSbt = (baseSettings +: dependencyDotHeader(title) +: dependencies).mkString("\n\n")
       IO.write(dir / "build.sbt", buildDotSbt)
       val args = new xsbt.boot.LauncherArguments("dependencyDot" :: Nil, false)
       println(xsbt.boot.Launch(dir, args))
       val dot = dir / "target" / "dependencies-compile.dot"
-      if (!dot.isFile) {
-        println("failed to write dot file? " + dependencies)
+      if(filterRoot) {
+        val dotLines = IO.readLines(dot)
+        IO.write(dot, dotLines.filterNot(_.contains("default:sbt_")).mkString("\n"))
       }
-      val dotLines = IO.readLines(dot)
-      IO.write(dot, dotLines.filterNot(_.contains("default:sbt_")).mkString("\n"))
       f(dir, dot)
     }
   }
 
-  def svg(dependencies: Seq[LibraryDependency], title: String): String = {
-    withTempDirAndDotFile(dependencies, title){ (dir, dot) =>
-      val svg = dir / "graph.svg"
-      Process(Seq("dot", "-o" + svg.getAbsolutePath, "-Tsvg", dot.getAbsolutePath), dir).!(logger)
-      IO.read(svg)
-    }
+  val convertSVG: (File, File) => String = { (dir, dot) =>
+    val svg = dir / "graph.svg"
+    Process(Seq("dot", "-o" + svg.getAbsolutePath, "-Tsvg", dot.getAbsolutePath), dir).!(logger)
+    IO.read(svg)
   }
+
+  def svg(dependencies: Seq[LibraryDependency], title: String): String =
+    withTempDirAndDotFile(dependencies, title)(convertSVG)
 
   def binary(dependencies: Seq[LibraryDependency], title: String, format: String): Array[Byte] =
     withTempDirAndDotFile(dependencies, title){ (dir, dot) =>

@@ -195,4 +195,23 @@ object Application extends Controller {
   val favicon = Action{
     Ok("").as(BINARY)
   }
+
+  def gist(id: String) = Action{
+    Gist.fetch(id) match {
+      case \/-(gist) =>
+        gist.files.get("build.sbt") match {
+          case Some(buildFile) =>
+            val svg = DependencyGraph.generate(
+              buildDotSbt = DependencyGraph.defaultBuildDotSbt(gist.description) + "\n\n" + buildFile.content,
+              filterRoot = false
+            )(DependencyGraph.convertSVG)
+            Ok(svg).as(IMAGE_SVG)
+          case None =>
+            NotFound("could not found `build.sbt`")
+        }
+      case -\/(error) =>
+        error.printStackTrace()
+        BadRequest(error.toString)
+    }
+  }
 }

@@ -2,6 +2,8 @@
 GET     /                                  dependency_graph.Application.urlList
 GET     /favicon.ico                       dependency_graph.Application.favicon
 
+GET     /gist/:id                          dependency_graph.Application.gist(id)
+
 #latest version svg graph
 GET     /:groupId/:artifactId/latest       dependency_graph.Application.latest(groupId, artifactId, cache: Boolean ?= true)
 
