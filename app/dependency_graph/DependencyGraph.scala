@@ -61,6 +61,9 @@ Seq(Compile, Test, Runtime, Provided, Optional).flatMap{ c =>
     dependencyDot := {
       val nodes = moduleGraph.value.nodes.par.map{ n =>
         val fullId = n.id.organisation + "/" + n.id.name + "/" + n.id.version
+        val g = n.id.organisation
+        val a = n.id.name
+        val v = n.id.version
         "  \"" + n.id.idString + "\"" +
         "[label=<" + n.id.organisation + "<BR/><B>" + n.id.name + "</B><BR/>" + n.id.version + ">" + """ + node + """ +
         ", target=\"_blank\"" +
@@ -84,7 +87,19 @@ Seq(Compile, Test, Runtime, Provided, Optional).flatMap{ c =>
   )
 
   private val embed = findURLMethod + "\n\n" + baseSettings(
-    """ ", href=\"" + findURL(n.id.organisation, n.id.name, n.id.version) + "\"" """
+    """ ", href=\"" + findURL(g, a, v) + "\"" """
+  )
+
+  private val pom = baseSettings(
+    """ ", href=\"" + s"http://repo1.maven.org/maven2/${g.replace('.', '/')}/${a}/${v}/${a}-${v}.pom" + "\"" """
+  )
+
+  private val src = baseSettings(
+    """ ", href=\"" + s"http://java-src.appspot.com/${g}/${a}/${v}" + "\"" """
+  )
+
+  private val doc = baseSettings(
+    """ ", href=\"" + s"https://oss.sonatype.org/service/local/repositories/releases/archive/${g.replace('.', '/')}/$a/$v/$a-$v-javadoc.jar/!/index.html" + "\"" """
   )
 
   private val noLink = baseSettings("\"\"")
@@ -128,6 +143,9 @@ Seq(Compile, Test, Runtime, Provided, Optional).flatMap{ c =>
       case LinkType.Redirect => redirect
       case LinkType.Embed => embed
       case LinkType.None => noLink
+      case LinkType.Pom => pom
+      case LinkType.Src => src
+      case LinkType.Doc => doc
     }
     val buildDotSbt = List(a, dependencyDotHeader(title)).mkString("\n\n")
     generate(buildDotSbt + "\n\n" + dependencies.mkString("\n\n"), filterRoot)(GraphType.SVG.generate(_, _))

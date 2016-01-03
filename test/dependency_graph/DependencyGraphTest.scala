@@ -47,6 +47,21 @@ final class DependencyGraphTest extends FunSpec {
         assert(embed.contains(playURL))
         assert(!embed.contains(redirectURL))
       }
+      it("pom") {
+        val pom = DependencyGraph.svg(play :: Nil, title, LinkType.Pom, false)
+        assert(pom.contains("http://repo1.maven.org/maven2"))
+        assert(none.length < pom.length)
+      }
+      it("src") {
+        val src = DependencyGraph.svg(play :: Nil, title, LinkType.Src, false)
+        assert(src.contains("http://java-src.appspot.com/"))
+        assert(none.length < src.length)
+      }
+      it("doc") {
+        val doc = DependencyGraph.svg(play :: Nil, title, LinkType.Doc, false)
+        assert(doc.contains("https://oss.sonatype.org/service/local/repositories/releases/archive"))
+        assert(none.length < doc.length)
+      }
     }
     it("png") {
       val a1 = DependencyGraph.withDependencies(play :: Nil, title, GraphType.PNG, true)
