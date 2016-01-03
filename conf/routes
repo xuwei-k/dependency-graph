@@ -17,6 +17,7 @@ GET     /:groupId/:artifactId/:version.png dependency_graph.Application.png(grou
 #gif dependency graph
 GET     /:groupId/:artifactId/:version.gif dependency_graph.Application.gif(groupId, artifactId, version, cache: Boolean ?= true)
 
+#return dot. http://www.graphviz.org/content/dot-language
 GET     /:groupId/:artifactId/:version.dot dependency_graph.Application.dot(groupId, artifactId, version, cache: Boolean ?= true)
 
 #svg dependency graph. alias
