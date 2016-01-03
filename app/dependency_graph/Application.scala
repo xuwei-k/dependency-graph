@@ -217,12 +217,25 @@ object Application extends Controller {
     Ok("").as(BINARY)
   }
 
-  def gist(id: String, format: Option[String]) = Action{
+  def gist(id: String, format: Option[String], link: Option[String]) = Action{
     Gist.fetch(id) match {
       case \/-(gist) =>
         gist.files.get("build.sbt") match {
           case Some(buildFile) =>
             GraphType.parseWithDefault(format) match {
+              case Right(GraphType.SVG) =>
+                LinkType.from(link) match {
+                  case Right(l) =>
+                    val graph = DependencyGraph.svgFromSettings(
+                      plainBuildSettings = buildFile.content,
+                      title = gist.description,
+                      link = l,
+                      filterRoot = false
+                    )
+                    GraphType.SVG.asPlayResult(graph)
+                  case Left(invalid) =>
+                    BadRequest(s"invalid link type $invalid")
+                }
               case Right(tpe) =>
                 val graph: tpe.A = DependencyGraph.generateFrom(
                   title = gist.description,

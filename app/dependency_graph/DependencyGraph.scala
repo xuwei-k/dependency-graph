@@ -138,8 +138,8 @@ Seq(Compile, Test, Runtime, Provided, Optional).flatMap{ c =>
   def withDependencies(dependencies: Seq[LibraryDependency], title: String, graphType: GraphType, filterRoot: Boolean = true): graphType.A =
     withTempDirAndDotFile(dependencies, title, filterRoot)(graphType.generate(_, _))
 
-  def svg(dependencies: Seq[LibraryDependency], title: String, link: LinkType, filterRoot: Boolean = true): String = {
-    val a = link match {
+  private def linkText(link: LinkType): String = {
+    link match {
       case LinkType.Redirect => redirect
       case LinkType.Embed => embed
       case LinkType.None => noLink
@@ -147,7 +147,15 @@ Seq(Compile, Test, Runtime, Provided, Optional).flatMap{ c =>
       case LinkType.Src => src
       case LinkType.Doc => doc
     }
-    val buildDotSbt = List(a, dependencyDotHeader(title)).mkString("\n\n")
+  }
+
+  def svgFromSettings(plainBuildSettings: String, title: String, link: LinkType, filterRoot: Boolean): String = {
+    val buildDotSbt = List(linkText(link), dependencyDotHeader(title)).mkString("\n\n")
+    generate(buildDotSbt + "\n\n" + plainBuildSettings, filterRoot)(GraphType.SVG.generate(_, _))
+  }
+
+  def svg(dependencies: Seq[LibraryDependency], title: String, link: LinkType, filterRoot: Boolean = true): String = {
+    val buildDotSbt = List(linkText(link), dependencyDotHeader(title)).mkString("\n\n")
     generate(buildDotSbt + "\n\n" + dependencies.mkString("\n\n"), filterRoot)(GraphType.SVG.generate(_, _))
   }
 
