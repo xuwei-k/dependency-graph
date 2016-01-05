@@ -1,5 +1,6 @@
-import play.api.GlobalSettings
-import play.api.mvc.{Results, RequestHeader}
+import play.api._
+import play.api.http.DefaultHttpErrorHandler
+import play.api.mvc.{RequestHeader, Results}
 
 import scala.concurrent.Future
 
@@ -17,4 +18,13 @@ object Global extends GlobalSettings{
     }
   }
 
+  private[this] object ErrorHandler extends DefaultHttpErrorHandler(
+    Environment.simple(mode = Mode.Dev),
+    Configuration.empty,
+    None,
+    Some(router.Routes)
+  )
+
+  override def onError(request: RequestHeader, ex: Throwable) =
+    ErrorHandler.onServerError(request, ex)
 }
