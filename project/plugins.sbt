@@ -11,4 +11,4 @@ scalacOptions ++= (
 
 fullResolvers ~= {_.filterNot(_.name == "jcenter")}
 
-addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.4.6")
+addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.4.8")
