@@ -26,7 +26,7 @@ lazy val root = Project(
   resolvers += Resolver.url("typesafe", url("http://repo.typesafe.com/typesafe/ivy-releases/"))(Resolver.ivyStylePatterns),
   resolvers += Opts.resolver.sonatypeReleases,
   libraryDependencies ++= (
-    ("org.scala-sbt" % "sbt" % sbtVersion.value) ::
+    ("org.scala-sbt" % "sbt" % "0.13.12") :: // can't use 0.13.13
     ("com.github.xuwei-k" %% "play-json-extra" % "0.3.0") ::
     ("com.github.xuwei-k" %% "httpz-native" % "0.4.0") ::
     ("org.scalatest" %% "scalatest" % "3.0.1" % "test") ::
@@ -49,5 +49,5 @@ lazy val root = Project(
     distinct(m.toList, Set.empty, Nil)
   }
 ).dependsOn(
-  ProjectRef(uri("git://github.com/sbt/launcher.git#v1.0.0-M1"), "launcher-implementation")
+  ProjectRef(uri("git://github.com/sbt/launcher.git#v1.0.0"), "launcher-implementation")
 )
