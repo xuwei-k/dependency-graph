@@ -14,7 +14,7 @@ import scala.xml.{Elem, XML}
 object DependencyGraph {
   // https://github.com/jrudolph/sbt-dependency-graph/issues/84
   val pluginSbtContents =
-    """addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.7.5")"""
+    """addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.8.2")"""
 
   val logger = ProcessLogger(println(_))
 
@@ -54,7 +54,7 @@ object DependencyGraph {
   }
 }"""
 
-  private def baseSettings(node: String) = """graphSettings
+  private def baseSettings(node: String) = """
 
 Seq(Compile, Test, Runtime, Provided, Optional).flatMap{ c =>
   inConfig(c){
