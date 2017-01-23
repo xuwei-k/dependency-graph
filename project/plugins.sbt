@@ -12,4 +12,4 @@ scalacOptions ++= (
 fullResolvers ~= {_.filterNot(_.name == "jcenter")}
 
 // can't use play 2.5 because does not support Scala 2.10
-addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.4.8")
+addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.4.10")
