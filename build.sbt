@@ -27,9 +27,9 @@ lazy val root = Project(
   resolvers += Opts.resolver.sonatypeReleases,
   libraryDependencies ++= (
     ("org.scala-sbt" % "sbt" % "0.13.12") :: // can't use 0.13.13
-    ("com.github.xuwei-k" %% "play-json-extra" % "0.3.0") ::
-    ("com.github.xuwei-k" %% "httpz-native" % "0.4.0") ::
-    ("org.scalatest" %% "scalatest" % "3.0.1" % "test") ::
+    ("com.github.xuwei-k" %% "play-json-extra" % "0.3.1") ::
+    ("com.github.xuwei-k" %% "httpz-native" % "0.5.1") ::
+    ("org.scalatest" %% "scalatest" % "3.0.3" % "test") ::
     Nil
   ),
   mappings in Universal ~= { m =>
