@@ -1,6 +1,6 @@
 # dependency graph - online [sbt-dependency-graph](https://github.com/jrudolph/sbt-dependency-graph)
 
-[![Build Status](https://travis-ci.org/xuwei-k/dependency-graph.svg?branch=master)](https://travis-ci.org/xuwei-k/dependency-graph)
+[![Build Status](https://travis-ci.com/xuwei-k/dependency-graph.svg?branch=master)](https://travis-ci.com/xuwei-k/dependency-graph)
 
 ## examples
 
