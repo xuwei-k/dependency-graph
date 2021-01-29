@@ -14,7 +14,7 @@ lazy val root = Project(
   javaOptions ++= sys.process.javaVmArguments.filter(
     a => Seq("-Xmx", "-Xms", "-XX").exists(a.startsWith)
   ),
-  licenses := Seq("MIT License" -> url("http://opensource.org/licenses/mit-license")),
+  licenses := Seq("MIT License" -> url("https://opensource.org/licenses/mit-license")),
   ivyScala := ivyScala.value map { _.copy(overrideScalaVersion = true) },
   shellPrompt := { state =>
     val branch = if(file(".git").exists){
@@ -23,7 +23,7 @@ lazy val root = Project(
     Project.extract(state).currentRef.project + branch + " > "
   },
   fullResolvers ~= {_.filterNot(_.name == "jcenter")},
-  resolvers += Resolver.url("typesafe", url("http://repo.typesafe.com/typesafe/ivy-releases/"))(Resolver.ivyStylePatterns),
+  resolvers += Resolver.url("typesafe", url("https://repo.typesafe.com/typesafe/ivy-releases/"))(Resolver.ivyStylePatterns),
   resolvers += Opts.resolver.sonatypeReleases,
   libraryDependencies ++= (
     ("org.scala-sbt" % "sbt" % "0.13.12") :: // can't use 0.13.13
