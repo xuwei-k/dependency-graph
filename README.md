@@ -1,7 +1,5 @@
 # dependency graph - online [sbt-dependency-graph](https://github.com/jrudolph/sbt-dependency-graph)
 
-[![Build Status](https://travis-ci.com/xuwei-k/dependency-graph.svg?branch=master)](https://travis-ci.com/xuwei-k/dependency-graph)
-
 ## examples
 
 - <https://dependency-graph.herokuapp.com/com.github.scalaprops/scalaprops_2.13/0.6.0>
