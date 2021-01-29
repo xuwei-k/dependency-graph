@@ -30,7 +30,7 @@ object DependencyGraph {
   }
 
   private[this] val findURLMethod = """def findURL(g: String, a: String, v: String): String = {
-  val u = s"http://repo1.maven.org/maven2/${g.replace('.', '/')}/${a}/${v}/${a}-${v}.pom"
+  val u = s"https://repo1.maven.org/maven2/${g.replace('.', '/')}/${a}/${v}/${a}-${v}.pom"
   try{
     val pom = scala.xml.XML.load(url(u))
     List(
@@ -83,7 +83,7 @@ Seq(Compile, Test, Runtime, Provided, Optional).flatMap{ c =>
 }"""
 
   private val redirect = baseSettings(
-    """ ", href=\"http://dependency-graph.herokuapp.com/" + fullId + "/redirect-project-page\"" """
+    """ ", href=\"https://dependency-graph.herokuapp.com/" + fullId + "/redirect-project-page\"" """
   )
 
   private val embed = findURLMethod + "\n\n" + baseSettings(
@@ -91,11 +91,11 @@ Seq(Compile, Test, Runtime, Provided, Optional).flatMap{ c =>
   )
 
   private val pom = baseSettings(
-    """ ", href=\"" + s"http://repo1.maven.org/maven2/${g.replace('.', '/')}/${a}/${v}/${a}-${v}.pom" + "\"" """
+    """ ", href=\"" + s"https://repo1.maven.org/maven2/${g.replace('.', '/')}/${a}/${v}/${a}-${v}.pom" + "\"" """
   )
 
   private val src = baseSettings(
-    """ ", href=\"" + s"http://java-src.appspot.com/${g}/${a}/${v}" + "\"" """
+    """ ", href=\"" + s"https://java-src.appspot.com/${g}/${a}/${v}" + "\"" """
   )
 
   private val doc = baseSettings(
@@ -196,7 +196,7 @@ Seq(Compile, Test, Runtime, Provided, Optional).flatMap{ c =>
   }
 
   def metadataXmlFromCentral(groupId: String, artifactId: String): Option[Elem] =
-    metadataXml("http://repo1.maven.org/maven2", groupId, artifactId)
+    metadataXml("https://repo1.maven.org/maven2", groupId, artifactId)
 
   def metadataXml(baseUrl: String, groupId: String, artifactId: String): Option[Elem] =
     try {
