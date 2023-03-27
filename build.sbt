@@ -49,5 +49,5 @@ lazy val root = Project(
     distinct(m.toList, Set.empty, Nil)
   }
 ).dependsOn(
-  ProjectRef(uri("git://github.com/sbt/launcher.git#v1.0.0"), "launcher-implementation")
+  ProjectRef(uri("https://github.com/sbt/launcher.git#v1.0.0"), "launcher-implementation")
 )
