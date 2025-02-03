@@ -14,6 +14,7 @@ jobs:
         java-version: 8
         distribution: adopt
     - uses: coursier/cache-action@v6
+    - uses: sbt/setup-sbt@v1
     - run: sudo apt-get update
     - run: sudo apt-get install graphviz
     - run: sbt -v test
